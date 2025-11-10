@@ -1,0 +1,87 @@
+{
+  "title": "K-Pop Adventurers and the Beat of Balance",
+  "grade_level": "3",
+  "targets": 12,
+  "words": [
+    {
+      "id": "w1",
+      "correct": "hiking",
+      "distractor": "hikking",
+      "type": "VCV"
+    },
+    {
+      "id": "w2",
+      "correct": "hoping",
+      "distractor": "hopping",
+      "type": "VCV"
+    },
+    {
+      "id": "w3",
+      "correct": "diner",
+      "distractor": "dinner",
+      "type": "VCV"
+    },
+    {
+      "id": "w4",
+      "correct": "rider",
+      "distractor": "ridder",
+      "type": "VCV"
+    },
+    {
+      "id": "w5",
+      "correct": "taping",
+      "distractor": "tapping",
+      "type": "VCV"
+    },
+    {
+      "id": "w6",
+      "correct": "banner",
+      "distractor": "baner",
+      "type": "VCCV"
+    },
+    {
+      "id": "w7",
+      "correct": "little",
+      "distractor": "litle",
+      "type": "VCCV"
+    },
+    {
+      "id": "w8",
+      "correct": "summer",
+      "distractor": "sumer",
+      "type": "VCCV"
+    },
+    {
+      "id": "w9",
+      "correct": "winner",
+      "distractor": "winer",
+      "type": "VCCV"
+    },
+    {
+      "id": "w10",
+      "correct": "kitten",
+      "distractor": "kiten",
+      "type": "VCCV"
+    },
+    {
+      "id": "w11",
+      "correct": "running",
+      "distractor": "runing",
+      "type": "VCCV"
+    },
+    {
+      "id": "w12",
+      "correct": "picnic",
+      "distractor": "picnik",
+      "type": "VCCV"
+    }
+  ],
+  "story_paragraphs": [
+    "The K-Pop Adventurers were getting ready for their big [w1] trip through the sparkling hills of Seoul. Each member packed their backpacks with snacks, glow sticks, and microphones. They were [w2] to find new sounds for their next song.",
+    "At a small [w3] near the edge of the park, they stopped for breakfast. Jin, the group's leader, was the best [w4] on his scooter and promised to lead the way to the mountain stage. Everyone cheered and took turns [w5] the practice show on their phones.",
+    "When they reached the hilltop, colorful flags waved under a giant [w6] that said, 'Music and Adventure!' The crowd was full of [w7] fans holding posters and singing along. It felt like the start of a perfect [w8] day.",
+    "Halfway through the concert, a sudden breeze blew the stage lights out! The Adventurers worked together like pros—one fixed the wires while another checked the speakers. They kept smiling, proving that teamwork makes every [w9].",
+    "After the show, the group met a stray [w10] that had been hiding behind the drums. They laughed as it started [w11] across the stage, chasing a ribbon from their costumes.",
+    "Before heading home, they all shared a [w12] under the trees. With music in their hearts and rhythm in their steps, the K-Pop Adventurers promised to keep exploring the world—one beat at a time."
+  ]
+}
