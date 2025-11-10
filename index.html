@@ -149,18 +149,35 @@ RULES:
         let stage1Selections = {};
         
         // Check if story is in URL
-        window.addEventListener('DOMContentLoaded', () => {
+        window.addEventListener('DOMContentLoaded', async () => {
             const urlParams = new URLSearchParams(window.location.search);
             const storyParam = urlParams.get('story');
             if (storyParam) {
-                try {
-                    storyData = JSON.parse(decodeURIComponent(atob(storyParam)));
-                    loadStory();
-                    // Hide file upload and prompt for shared links
-                    document.querySelector('.toolbar').style.display = 'none';
-                    document.querySelector('.note').textContent = 'Story loaded from share link!';
-                } catch(err) {
-                    console.error('Failed to load story from URL:', err);
+                // Check if it's a story name (short) or encoded data (long)
+                if (storyParam.length < 100) {
+                    // It's a story filename - fetch from stories folder
+                    try {
+                        const response = await fetch(`stories/${storyParam}.json`);
+                        if (!response.ok) throw new Error('Story not found');
+                        storyData = await response.json();
+                        loadStory();
+                        // Hide file upload and prompt for shared links
+                        document.querySelector('.toolbar').style.display = 'none';
+                        document.querySelector('.note').textContent = 'Story loaded from share link!';
+                    } catch(err) {
+                        alert('Story not found: ' + storyParam);
+                        console.error('Failed to load story:', err);
+                    }
+                } else {
+                    // It's encoded data (legacy support)
+                    try {
+                        storyData = JSON.parse(decodeURIComponent(atob(storyParam)));
+                        loadStory();
+                        document.querySelector('.toolbar').style.display = 'none';
+                        document.querySelector('.note').textContent = 'Story loaded from share link!';
+                    } catch(err) {
+                        console.error('Failed to load story from URL:', err);
+                    }
                 }
             }
         });
@@ -180,14 +197,25 @@ RULES:
         
         // Share link functionality
         document.getElementById('copyShareLink').onclick = async () => {
-            const encoded = btoa(encodeURIComponent(JSON.stringify(storyData)));
-            const shareUrl = `${window.location.origin}${window.location.pathname}?story=${encoded}`;
+            // Generate story filename from title
+            const storyName = storyData.title
+                .toLowerCase()
+                .replace(/[^a-z0-9]+/g, '_')
+                .replace(/^_|_$/g, '');
+            
+            const shareUrl = `${window.location.origin}${window.location.pathname}?story=${storyName}`;
+            
+            // Show instructions to save the story file
+            const instructions = `Share URL: ${shareUrl}\n\nTo make this link work, save your story JSON file as:\nstories/${storyName}.json\n\nThen commit and push to GitHub.`;
+            
             try {
                 await navigator.clipboard.writeText(shareUrl);
-                document.getElementById('shareFeedback').textContent = 'Link copied!';
+                document.getElementById('shareFeedback').textContent = 'Link copied! See console for instructions.';
+                console.log(instructions);
+                alert(instructions);
                 setTimeout(() => {
                     document.getElementById('shareFeedback').textContent = '';
-                }, 3000);
+                }, 5000);
             } catch {
                 alert('Failed to copy link');
             }
