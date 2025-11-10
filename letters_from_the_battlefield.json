@@ -1,0 +1,87 @@
+{
+  "title": "Letters from the Battlefield",
+  "grade_level": "3",
+  "targets": 12,
+  "words": [
+    {
+      "id": "w1",
+      "correct": "hoping",
+      "distractor": "hopping",
+      "type": "VCV"
+    },
+    {
+      "id": "w2",
+      "correct": "dinner",
+      "distractor": "diner",
+      "type": "VCCV"
+    },
+    {
+      "id": "w3",
+      "correct": "letter",
+      "distractor": "later",
+      "type": "VCCV"
+    },
+    {
+      "id": "w4",
+      "correct": "winner",
+      "distractor": "winer",
+      "type": "VCCV"
+    },
+    {
+      "id": "w5",
+      "correct": "riding",
+      "distractor": "ridding",
+      "type": "VCV"
+    },
+    {
+      "id": "w6",
+      "correct": "tapping",
+      "distractor": "taping",
+      "type": "VCCV"
+    },
+    {
+      "id": "w7",
+      "correct": "hoping",
+      "distractor": "hopping",
+      "type": "VCV"
+    },
+    {
+      "id": "w8",
+      "correct": "planning",
+      "distractor": "planing",
+      "type": "VCCV"
+    },
+    {
+      "id": "w9",
+      "correct": "bitter",
+      "distractor": "biter",
+      "type": "VCCV"
+    },
+    {
+      "id": "w10",
+      "correct": "later",
+      "distractor": "latter",
+      "type": "VCV"
+    },
+    {
+      "id": "w11",
+      "correct": "running",
+      "distractor": "runing",
+      "type": "VCCV"
+    },
+    {
+      "id": "w12",
+      "correct": "better",
+      "distractor": "beter",
+      "type": "VCCV"
+    }
+  ],
+  "story_paragraphs": [
+    "Jack and Annie were [w1] the tree house would take them somewhere peaceful, but when they looked out, they saw tents and soldiers. The air smelled like smoke, and a drummer was [w6] a slow beat by the campfire.",
+    "They were soon [w5] through the camp, looking for the hospital tents. A kind nurse gave them bread for [w2] and showed them rows of cots. Annie whispered that she was [w7] they could help.",
+    "A boy not much older than Jack was writing a [w3] home. He said his brother was the real [w4], but he wanted to be brave too. Annie told him every small act mattered.",
+    "The nurse said she was [w8] to carry more bandages to the wagon. Jack and Annie followed, their boots [w11] through the soft dirt. The nurse smiled and said things would get [w12] soon.",
+    "Later that night, they sat by the fire. The sky looked [w9], and the stars flickered like lanterns. Annie said she’d never forget the courage she saw that day.",
+    "When morning came, the soldiers were marching away. Jack said he’d write down everything [w10], so they would remember the lessons about kindness and bravery even after the war was done."
+  ]
+}

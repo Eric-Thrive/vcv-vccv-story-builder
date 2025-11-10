@@ -1,0 +1,436 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <title>VCV/VCCV Story Player Preview</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <style>
+        body { 
+            font-family: Arial, sans-serif; 
+            margin: 20px; 
+            max-width: 900px; 
+        }
+        h1 { 
+            margin-bottom: 0.3em; 
+        }
+        .note { 
+            color: #555; 
+        }
+        .toolbar { 
+            display: flex; 
+            gap: 10px; 
+            flex-wrap: wrap; 
+            margin-bottom: 15px; 
+        }
+        textarea { 
+            width: 100%; 
+            height: 200px; 
+            font-family: monospace; 
+        }
+        button { 
+            border: 1px solid #333; 
+            border-radius: 6px; 
+            padding: 8px 12px; 
+            cursor: pointer; 
+        }
+        #promptPopup { 
+            display: none; 
+            position: fixed; 
+            top: 10%; 
+            left: 50%; 
+            transform: translateX(-50%); 
+            background: #fff; 
+            border: 1px solid #aaa; 
+            border-radius: 8px; 
+            padding: 15px; 
+            width: 80%; 
+            max-width: 600px; 
+            z-index: 1000; 
+            box-shadow: 0 0 8px rgba(0,0,0,0.3); 
+        }
+        #promptPopup textarea { 
+            height: 300px; 
+        }
+        .hidden {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <h1>VCV/VCCV Story Player</h1>
+    <p class="note">Upload the <code>letters_from_the_battlefield.json</code> file or open the prompt template below to generate new stories.</p>
+    
+    <div class="toolbar">
+        <input id="fileInput" type="file" accept="application/json" />
+        <button id="openPromptPopup">Open Prompt Template</button>
+    </div>
+    
+    <div id="promptPopup">
+        <h3>Prompt Template</h3>
+        <textarea id="promptText" readonly></textarea>
+        <div class="toolbar">
+            <button id="copyPrompt">Copy to Clipboard</button>
+            <button id="closePopup">Close</button>
+        </div>
+    </div>
+    
+    <section id="meta" class="hidden">
+        <h2 id="title"></h2>
+        <p id="metaInfo" class="note"></p>
+        <div id="shareSection" class="hidden" style="margin-top: 10px;">
+            <button id="copyShareLink">Copy Share Link</button>
+            <span id="shareFeedback" style="margin-left: 10px; color: #28a745;"></span>
+        </div>
+    </section>
+    
+    <section id="stage1" class="hidden">
+        <h2>Stage 1: Click the correct spelling</h2>
+        <div id="stage1Story"></div>
+        <button id="finish1">Check Score</button>
+        <button id="reset1" class="hidden">Reset Stage 1</button>
+        <span id="result1"></span>
+    </section>
+    
+    <section id="stage2" class="hidden">
+        <h2>Stage 2: Fill in the blanks</h2>
+        <div id="stage2Story"></div>
+        <button id="check2">Check Answers</button> <span id="result2"></span>
+    </section>
+    
+    <script>
+        const PROMPT_TEXT = `You are generating a grade-3 phonics activity on VCV/VCCV spelling.
+
+INPUTS:
+- TOPIC: {type of story}
+- TARGET_COUNT: {e.g., 12}
+- WORD_LIST: list of tuples (correct, distractor, type) where type ∈ {VCV, VCCV}.
+  Example: (hoping, hopping, VCV), (dinner, diner, VCCV)
+
+TASK:
+1) Write a coherent story for grade 3 with 5–7 short paragraphs about TOPIC.
+2) Insert placeholders [w1]...[wN] at natural points so each target appears exactly once.
+3) Build a balanced targets array of length TARGET_COUNT using WORD_LIST, ~50/50 mix when possible.
+4) Return STRICT JSON only that matches this schema.
+
+JSON SCHEMA:
+{
+  "title": string,
+  "grade_level": "3",
+  "targets": integer,
+  "words": [ {"id":"w1","correct":string,"distractor":string,"type":"VCV|VCCV"}, ... ],
+  "story_paragraphs": [string, ...] // 5–7 paragraphs with [w1]...[wN]
+}
+
+RULES:
+- Grade 3 readability.
+- Common words outside targets.
+- Each placeholder used exactly once.
+- No extra text around JSON.`;
+
+        document.getElementById('promptText').value = PROMPT_TEXT;
+        
+        const popup = document.getElementById('promptPopup');
+        document.getElementById('openPromptPopup').onclick = () => { 
+            popup.style.display = 'block'; 
+        };
+        document.getElementById('closePopup').onclick = () => { 
+            popup.style.display = 'none'; 
+        };
+        document.getElementById('copyPrompt').onclick = async () => {
+            try { 
+                await navigator.clipboard.writeText(PROMPT_TEXT); 
+                alert('Prompt copied to clipboard'); 
+            } catch { 
+                alert('Copy failed'); 
+            }
+        };
+        
+        let storyData = null;
+        let stage1Selections = {};
+        
+        // Check if story is in URL
+        window.addEventListener('DOMContentLoaded', () => {
+            const urlParams = new URLSearchParams(window.location.search);
+            const storyParam = urlParams.get('story');
+            if (storyParam) {
+                try {
+                    storyData = JSON.parse(decodeURIComponent(atob(storyParam)));
+                    loadStory();
+                    // Hide file upload and prompt for shared links
+                    document.querySelector('.toolbar').style.display = 'none';
+                    document.querySelector('.note').textContent = 'Story loaded from share link!';
+                } catch(err) {
+                    console.error('Failed to load story from URL:', err);
+                }
+            }
+        });
+        
+        const fileInput = document.getElementById('fileInput');
+        fileInput.addEventListener('change', async (e) => {
+            const f = e.target.files && e.target.files[0]; 
+            if(!f) return;
+            const txt = await f.text();
+            try {
+                storyData = JSON.parse(txt);
+                loadStory();
+            } catch(err) { 
+                alert('Invalid JSON'); 
+            }
+        });
+        
+        // Share link functionality
+        document.getElementById('copyShareLink').onclick = async () => {
+            const encoded = btoa(encodeURIComponent(JSON.stringify(storyData)));
+            const shareUrl = `${window.location.origin}${window.location.pathname}?story=${encoded}`;
+            try {
+                await navigator.clipboard.writeText(shareUrl);
+                document.getElementById('shareFeedback').textContent = 'Link copied!';
+                setTimeout(() => {
+                    document.getElementById('shareFeedback').textContent = '';
+                }, 3000);
+            } catch {
+                alert('Failed to copy link');
+            }
+        };
+        
+        // Reset Stage 1
+        document.getElementById('reset1').onclick = () => {
+            buildStage1();
+            document.getElementById('result1').textContent = '';
+            document.getElementById('reset1').classList.add('hidden');
+        };
+        
+        function loadStory() {
+            // Show meta info
+            document.getElementById('title').textContent = storyData.title;
+            document.getElementById('metaInfo').textContent = 
+                `Grade ${storyData.grade_level} | ${storyData.targets} target words`;
+            document.getElementById('meta').classList.remove('hidden');
+            
+            // Show share link section
+            document.getElementById('shareSection').classList.remove('hidden');
+            
+            // Build Stage 1 only
+            buildStage1();
+            document.getElementById('stage1').classList.remove('hidden');
+            
+            // Build Stage 2 but keep it hidden
+            buildStage2();
+        }
+        
+        function buildStage1() {
+            const container = document.getElementById('stage1Story');
+            container.innerHTML = '';
+            stage1Selections = {};
+            
+            const wordMap = {};
+            storyData.words.forEach(w => wordMap[w.id] = w);
+            
+            storyData.story_paragraphs.forEach((para, idx) => {
+                const p = document.createElement('p');
+                p.style.lineHeight = '1.8';
+                p.style.marginBottom = '1em';
+                
+                let html = para;
+                // Replace placeholders with clickable word choices
+                html = html.replace(/\[w\d+\]/g, (match) => {
+                    const id = match.slice(1, -1); // Remove [ ]
+                    const word = wordMap[id];
+                    if (!word) return match;
+                    
+                    // Randomly order correct/distractor
+                    const choices = Math.random() > 0.5 
+                        ? [word.correct, word.distractor]
+                        : [word.distractor, word.correct];
+                    
+                    return `<span class="word-choice" data-id="${id}">
+                        <button class="choice-btn" data-id="${id}" data-word="${choices[0]}">${choices[0]}</button> / 
+                        <button class="choice-btn" data-id="${id}" data-word="${choices[1]}">${choices[1]}</button>
+                    </span>`;
+                });
+                
+                p.innerHTML = html;
+                container.appendChild(p);
+            });
+            
+            // Add click handlers
+            container.querySelectorAll('.choice-btn').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    const id = this.dataset.id;
+                    const word = this.dataset.word;
+                    const correctWord = wordMap[id].correct;
+                    
+                    // Deselect siblings
+                    const siblings = container.querySelectorAll(`[data-id="${id}"]`);
+                    siblings.forEach(s => {
+                        s.style.background = '';
+                        s.style.border = '1px solid #333';
+                    });
+                    
+                    // Show if correct or incorrect
+                    if (word === correctWord) {
+                        this.style.background = '#d4edda';
+                        this.style.border = '2px solid #28a745';
+                    } else {
+                        this.style.background = '#f8d7da';
+                        this.style.border = '2px solid #dc3545';
+                    }
+                    
+                    stage1Selections[id] = word;
+                });
+            });
+        }
+        
+        document.getElementById('finish1').onclick = () => {
+            let correct = 0;
+            const wordMap = {};
+            storyData.words.forEach(w => wordMap[w.id] = w);
+            
+            for (let id in stage1Selections) {
+                if (stage1Selections[id] === wordMap[id].correct) {
+                    correct++;
+                }
+            }
+            
+            const total = storyData.words.length;
+            const percentage = Math.round(correct/total*100);
+            document.getElementById('result1').textContent = 
+                `Score: ${correct}/${total} (${percentage}%)`;
+            
+            // Check if student can move to Stage 2
+            if (percentage >= 85) {
+                document.getElementById('result1').textContent += ' - Great job! Moving to Stage 2...';
+                document.getElementById('reset1').classList.add('hidden');
+                setTimeout(() => {
+                    document.getElementById('stage1').classList.add('hidden');
+                    document.getElementById('stage2').classList.remove('hidden');
+                }, 1500);
+            } else {
+                document.getElementById('result1').textContent += ' - You need 85% to move to Stage 2. Try again!';
+                document.getElementById('reset1').classList.remove('hidden');
+            }
+        };
+        
+        function createPartialWord(word) {
+            // Find first TWO vowels and hide consonants between them (VCV/VCCV pattern)
+            const vowels = 'aeiouAEIOU';
+            let firstVowelIdx = -1;
+            let secondVowelIdx = -1;
+            
+            for (let i = 0; i < word.length; i++) {
+                if (vowels.includes(word[i])) {
+                    if (firstVowelIdx === -1) {
+                        firstVowelIdx = i;
+                    } else if (secondVowelIdx === -1) {
+                        secondVowelIdx = i;
+                        break; // Stop after finding second vowel
+                    }
+                }
+            }
+            
+            if (firstVowelIdx === -1 || secondVowelIdx === -1) return word; // Need at least 2 vowels
+            
+            // Build partial word: show everything except consonants between first and second vowel
+            let partial = '';
+            for (let i = 0; i < word.length; i++) {
+                if (i > firstVowelIdx && i < secondVowelIdx && !vowels.includes(word[i])) {
+                    partial += '_';
+                } else {
+                    partial += word[i];
+                }
+            }
+            
+            return partial;
+        }
+        
+        function buildStage2() {
+            const container = document.getElementById('stage2Story');
+            container.innerHTML = '';
+            
+            const wordMap = {};
+            storyData.words.forEach(w => wordMap[w.id] = w);
+            
+            storyData.story_paragraphs.forEach((para, idx) => {
+                const p = document.createElement('p');
+                p.style.lineHeight = '1.8';
+                p.style.marginBottom = '1em';
+                
+                let html = para;
+                // Replace placeholders with partial word + input
+                html = html.replace(/\[w\d+\]/g, (match) => {
+                    const id = match.slice(1, -1);
+                    const word = wordMap[id];
+                    const partial = createPartialWord(word.correct);
+                    const blankCount = (partial.match(/_/g) || []).length;
+                    
+                    // Debug logging
+                    if (word.correct === 'running') {
+                        console.log('Running debug:', {word: word.correct, partial, blankCount});
+                    }
+                    
+                    return `<span style="white-space: nowrap;">${partial.replace(/_+/g, 
+                        `<input type="text" class="blank-input" data-id="${id}" 
+                        style="width: 40px; padding: 2px 4px; border: 1px solid #999; border-radius: 3px; text-align: center;" 
+                        maxlength="2" />`)}
+                    </span>`;
+                });
+                
+                p.innerHTML = html;
+                container.appendChild(p);
+            });
+        }
+        
+        document.getElementById('check2').onclick = () => {
+            const inputs = document.querySelectorAll('#stage2Story .blank-input');
+            let correct = 0;
+            const wordMap = {};
+            storyData.words.forEach(w => wordMap[w.id] = w);
+            
+            inputs.forEach(input => {
+                const id = input.dataset.id;
+                const word = wordMap[id].correct;
+                const answer = input.value.trim().toLowerCase();
+                
+                // Extract just the consonants between first TWO vowels (VCV/VCCV pattern)
+                const vowels = 'aeiouAEIOU';
+                let firstVowelIdx = -1;
+                let secondVowelIdx = -1;
+                
+                for (let i = 0; i < word.length; i++) {
+                    if (vowels.includes(word[i])) {
+                        if (firstVowelIdx === -1) {
+                            firstVowelIdx = i;
+                        } else if (secondVowelIdx === -1) {
+                            secondVowelIdx = i;
+                            break;
+                        }
+                    }
+                }
+                
+                let expectedFill = '';
+                for (let i = 0; i < word.length; i++) {
+                    if (i > firstVowelIdx && i < secondVowelIdx && !vowels.includes(word[i])) {
+                        expectedFill += word[i].toLowerCase();
+                    }
+                }
+                
+                if (answer === expectedFill) {
+                    input.style.background = '#d4edda';
+                    input.style.border = '2px solid #28a745';
+                    input.disabled = false; // Allow corrections
+                    correct++;
+                } else {
+                    input.style.background = '#f8d7da';
+                    input.style.border = '2px solid #dc3545';
+                    input.disabled = false; // Allow corrections
+                }
+            });
+            
+            const total = storyData.words.length;
+            const percentage = Math.round(correct/total*100);
+            document.getElementById('result2').textContent = 
+                `Score: ${correct}/${total} (${percentage}%) - You can correct your answers and check again!`;
+        };
+    </script>
+</body>
+</html>
